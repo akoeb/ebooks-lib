@@ -10,6 +10,15 @@
 # connection stuff and shoot.
 # on debian based systems, the python package for mysql is called
 
+
+## This file is part of the ebooks-library software
+## Copyright (C) 2014, Alexander Köb <nerdkram@koeb.me>
+##
+## Licensed under the GNU General Public License version 3.
+## See the COPYING file for a full license statement.
+
+
+
 import MySQLdb
 import time
 from sets import Set

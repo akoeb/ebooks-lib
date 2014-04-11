@@ -4,6 +4,14 @@ Loop over filesystem starting at base dir from config
 find all epubs, read author, title and laguage from metadata
 and insert them all in the database
 */
+/*
+This file is part of the ebook library project
+Copyright (C) 2014, Alexander Köb <nerdkram@koeb.me>
+
+Licensed under the GNU General Public License version 3. 
+See the COPYING file for a full license statement.          
+
+*/
 
 require('config.inc.php');
 require('DatabaseConnection.inc.php');

@@ -2,6 +2,14 @@
 /*
 ** download the file, id param is handed in via get
 */
+/*
+This file is part of the ebook library project
+Copyright (C) 2014, Alexander Köb <nerdkram@koeb.me>
+
+Licensed under the GNU General Public License version 3. 
+See the COPYING file for a full license statement.          
+
+*/
 
 require('config.inc.php');
 require('DatabaseConnection.inc.php');

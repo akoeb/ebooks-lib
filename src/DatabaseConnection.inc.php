@@ -5,7 +5,7 @@
 
 /*
 This file is part of the ebook library project
-Copyright (C) 2013, Alexander Köb <nerdkram@koeb.me>
+Copyright (C) 2014, Alexander Köb <nerdkram@koeb.me>
 
 Licensed under the GNU General Public License version 3. 
 See the COPYING file for a full license statement.          

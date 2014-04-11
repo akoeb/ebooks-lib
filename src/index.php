@@ -10,6 +10,14 @@
     show author, title and language of all found books
     this can be filtered by language
 */
+/*
+This file is part of the ebook library project
+Copyright (C) 2014, Alexander Köb <nerdkram@koeb.me>
+
+Licensed under the GNU General Public License version 3. 
+See the COPYING file for a full license statement.          
+
+*/
 ?>
 <!DOCTYPE html>
 <html>
