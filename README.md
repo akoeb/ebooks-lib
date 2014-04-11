@@ -5,7 +5,7 @@ This software will create a database of all epubs found recursively from one dir
 it will offer the possibility to browse through the database or search for author or title.
 
 
-create table books (
+create table IF NOT EXISTS  books (
     id INT NOT NULL auto_increment primary key,
     author varchar(500),
     title varchar(500),

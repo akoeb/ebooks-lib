@@ -5,16 +5,16 @@
 
 require('config.inc.php');
 require('DatabaseConnection.inc.php');
-$dbh = new DatabaseConnection;
+$dbh = new DatabaseConnection($database_host, $database, $database_user, $database_password);
 
 $id = $_GET['id'];
 if(empty($_GET['id'])) {
     $error = 'Which file do you want to download?';
 }
-elseif(!is_numeric($_GET['id']) {
+elseif(!is_numeric($_GET['id'])) {
     $error = "Aaaaah! Curse your sudden but inevitable betrayal!";
 }
-$file = $dbh->get_path_from_id($id);
+$file = $basedir .'/' . $dbh->get_path_from_id($id);
 if (!file_exists($file)) $error = "File '$file' is in the database, but it doesn't exist.";
 
 if (! empty ($error)) {

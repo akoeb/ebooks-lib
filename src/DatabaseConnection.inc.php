@@ -30,9 +30,9 @@ class DatabaseConnection
 
         // set the DB connection config
         $this->db_host = $db_host;
-        $this->db_name = $db;
+        $this->db_name = $db_name;
         $this->db_user = $user;
-        $this->pw = $pw;
+        $this->db_pw = $pw;
 
         $this->connect();
     }
@@ -42,117 +42,83 @@ class DatabaseConnection
     {
         // initialize a persistent DB connection
         if (!$this->db_conn) {
-            $this->db_conn = mysqli_connect ( $this->db_host, $this->db_user, $this->db_pw, $this->db_name);
-            if (mysqli_connect_errno($this->db_conn)) {
-                    die "Failed to connect to MySQL: " . mysqli_connect_error();
+            try {
+                $this->db_conn = new PDO(
+                    'mysql:host='.$this->db_host.';dbname='.$this->db_name, 
+                    $this->db_user, 
+                    $this->db_pw, 
+                    array(PDO::ATTR_PERSISTENT => true, PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"));
+                $this->db_conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            } catch (PDOException $e) {
+                die ("Failed to connect to MySQL: " . $e->getMessage()."<br/>\n");
             }
-            $this->books_count = $this->simple_query("SELECT count(*) FROM books");
+            $this->books_count = $this->query("SELECT count(*) FROM books");
         }
         return $this->db_conn;
     }
 
-    // raise an exception if an error occurred
-    function error($msg;) {
-        throw new Exception($msg);
-    }
 
-    function simple_query($query)  {
+    function query($query, $params = FALSE)  {
         $this->connect();
-        if (!($stmt = $this->db_conn->prepare($query))) {
-                 $this->error("simple_query: Prepare of $query failed: (" . $mysqli->errno . ") " . $mysqli->error);
+        $stmt = $this->db_conn->prepare($query);
+        
+        if($params && is_array($params)) {
+            $stmt->execute($params);
         }
-        if (!$stmt->execute()) {
-                $this->error("simple_query: Execute if $query failed: (" . $stmt->errno . ") " . $stmt->error);
+        else {
+            $stmt->execute();
         }
-        $res = $stmt->get_result();
-        $row = $res->fetch_all(MYSQLI_NUM);
 
-        $stmt->close();
+        $res = $stmt->fetchAll();
+        $stmt = '';
+
         // if only one element in array:
-        if (count($row) == 1) {
+        if (count($res) == 1) {
             // and that eement has laso only one
-            if (count($row[0]) == 1) {
+            if (count($res[0]) == 1) {
                 // return single string
-                return $row[0][0];
+                return $res[0][0];
             }
             else {
                 // or return simple array
-                return $row[0];
+                return $res[0];
             }
         }
-        else {
-            // or return 2-dim array:
-            return $row;
+        else {            // or return 2-dim array:
+            return $res;
         }
     }
 
-    function query($query, $params ) {
+    function exec_stmt($query, $params = FALSE) {
         $this->connect();
+        $stmt = $this->db_conn->prepare($query);
 
-        // This will loop through params, and generate types. e.g. 'ss'
-        $types = '';                        
-        foreach($params as $param) {        
-            if(is_int($param)) {
-                $types .= 'i';              //integer
-            } elseif (is_float($param)) {
-                $types .= 'd';              //double
-            } elseif (is_string($param)) {
-                $types .= 's';              //string
-            } else {
-                $types .= 'b';              //blob and unknown
-            }
+         if($params && is_array($params)) {
+            $stmt->execute($params);
         }
-        array_unshift($params, $types);
-
-
-
-        // Start stmt
-        $stmt = $this->connection->stmt_init(); // $this->connection is the mysqli connection instance
-        if($stmt->prepare($query)) {
-
-            // Bind Params
-            call_user_func_array(array($stmt,'bind_param'),$params);
-            
-            if (!$stmt->execute()) {
-                $this->error("query: Execute if $stmt failed: (" . $stmt->errno . ") " . $stmt->error);
-            }
-
-            // Get metadata for field names
-            $meta = $stmt->result_metadata();
-
-            // initialise some empty arrays
-            $fields = $results = array();
-
-            // This is the tricky bit dynamically creating an array of variables to use
-            // to bind the results
-            while ($field = $meta->fetch_field()) { 
-                $var = $field->name; 
-                $$var = null; 
-                $fields[$var] = &$$var; 
-            }
-
-            // Bind Results
-            call_user_func_array(array($stmt,'bind_result'),$fields);
-
-            // Fetch Results
-            while ($stmt->fetch()){ $results[] = $fields; }
-
-            $stmt->close();
-
-            return $results);
+        else {
+            $stmt->execute();
         }
+       
+        if($stmt->execute($params)) {
+            // ok, statement executed.
+            // do we have a result set or was it an insert?
+            $res = $stmt->rowCount();
+        }
+        $stmt = '';
+ 
+        return $res;
     }
 
 
 
     function add_book($author, $title, $language, $path) {
-        $this->connect();
-        $this->query("INSERT INTO books(author, title, language, path) VALUES (?, ?, ?, ?)", ($author, $title, $language, $path));
+        $this->exec_stmt("INSERT INTO books(author, title, language, path) VALUES (?, ?, ?, ?)", array($author, $title, $language, $path));
     }
 
     function delete_book($id) {
         $this->connect();
-        $this->query("DELETE FROM books WHERE id = ?", ($id));
+        $this->exec_stmt("DELETE FROM books WHERE id = ?", ($id));
     }
 
     function list_books($min = 0, $max = 0) {
@@ -161,45 +127,55 @@ class DatabaseConnection
         }
         $count = $max - $min; 
         $this->connect();
-        return $this->query("SELECT id, author, title, language, path FROM books LIMIT (?, ?)",($min, $count))
+        return $this->query("SELECT id, author, title, language FROM books LIMIT (?, ?)",array($min, $count));
     }
 
     function show_book($id) {
         $this->connect();
-        return $this->query("SELECT id, author, title, language, path FROM books where id = ?",($id));
+        $result = $this->query("SELECT id, author, title, language FROM books where id = ?",array($id));
+        return array($result);
     }
 
     function all_languages() {
-        $languages = $this->simple_query("SELECT DISTINCT language FROM books");
+        $languages = $this->query("SELECT DISTINCT language FROM books");
         return $languages;
     }
 
     function search_author($term, $lang = '') {
-        if(empty($lang) {
-            return $this->query("SELECT * FROM books  WHERE MATCH(author) AGAINST (?)",($term));
+        if(empty($lang)) {
+            $result = $this->query("SELECT id, author, title, language FROM books  WHERE MATCH(author) AGAINST (?)",array($term));
         }
         else {
-            return $this->query("SELECT * FROM books  WHERE MATCH(author) AGAINST (?) and language = ?",($term, $lang));
+            $result = $this->query("SELECT id, author, title, language FROM books  WHERE MATCH(author) AGAINST (?) and language = ?",array($term, $lang));
         }
+        return $result;
     }
+    
     function search_title($term, $lang = '') {
-        if(empty($lang) {
-            return $this->query("SELECT * FROM books  WHERE MATCH(title) AGAINST (?)",($term));
+        if(empty($lang)) {
+            $result = $this->query("SELECT id, author, title, language FROM books  WHERE MATCH(title) AGAINST (?)",array($term));
         }
         else {
-            return $this->query("SELECT * FROM books  WHERE MATCH(title) AGAINST (?) and language = ?",($term, $lang));
+            $result = $this->query("SELECT id, author, title, language FROM books  WHERE MATCH(title) AGAINST (?) and language = ?",array($term, $lang));
         }
+        return $result;
     }
+    
     function search_author_title($term, $lang = '') {
-        if(empty($lang) {
-            return $this->query("SELECT * FROM books  WHERE MATCH(author, title) AGAINST (?)",($term));
+        if(empty($lang)) {
+            $result = $this->query("SELECT * FROM books  WHERE MATCH(author, title) AGAINST (?)",array($term));
         }
         else {
-            return $this->query("SELECT * FROM books  WHERE MATCH(author, title) AGAINST (?) AND language = ?",($term, $lang));
+            $result = $this->query("SELECT * FROM books  WHERE MATCH(author, title) AGAINST (?) AND language = ?",array($term, $lang));
         }
+        //print"<pre>";
+        //print_r($result);
+        //print"</pre>";
+        return $result;
     }
+    
     function is_indexed($file) {
-        $id = $this->query('SELECT id FROM books WHERE path = ?', ($file));
+        $id = $this->query('SELECT id FROM books WHERE path = ?', array($file));
         if (isset($id)) {
             if(is_array($id) && count($id) > 0) {
                 return true;
@@ -210,5 +186,11 @@ class DatabaseConnection
         }
         return false;
     }
+
+    function get_path_from_id($id) {
+        $path = $this->query('SELECT path FROM books WHERE id = ?', array($id));
+        return $path[0];
+    }
+
 }
 ?>
