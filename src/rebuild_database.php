@@ -36,29 +36,46 @@ foreach($files as $file ) {
         if(! $dbh->is_indexed(substr($file,$basedir_len))) {
             // can we open the file?
             if ($zip->open($file) === TRUE) {
+                $meta_file = "";
+                $container_xml = "";
+
                 // load container.xml to find metadata file
-                if($xml->loadXML($zip->getFromName( 'META-INF/container.xml' ))) {
-                    // read metadata from file
-                    $meta = $xml->getElementsByTagName( 'rootfile')->item(0)->getAttribute( 'full-path' );
-                    if( $xml->loadXML( $zip->getFromName( $meta ))) {
-                        $author = '';
-                        if($xml->getElementsByTagName('creator') && $xml->getElementsByTagName('creator')->item(0)) {
-                            $author = $xml->getElementsByTagName('creator')->item(0)->nodeValue;
-                        }
-                        $title = '';
-                        if ($xml->getElementsByTagName('title') && $xml->getElementsByTagName('title')->item(0)) {
-                            $title = $xml->getElementsByTagName('title')->item(0)->nodeValue;
-                        }
-                        $language = '';
-                        if ($xml->getElementsByTagName('language') && $xml->getElementsByTagName('language')->item(0)) {
-                            $language = $xml->getElementsByTagName('language')->item(0)->nodeValue;
-                        }
-                        $dbh->add_book($author, $title, $language, substr($file,$basedir_len));
-                        $epubs_added ++;
-                    }
+                $container_xml = $zip->getFromName( 'META-INF/container.xml' );
+                if(! empty ($container_xml) && $xml->loadXML($container_xml)) {
+                    $meta_file = $xml->getElementsByTagName( 'rootfile')->item(0)->getAttribute( 'full-path' );
                 }
-                $zip->close();
-            } // end open file
+                else {
+                    print "Error in epub file $file: no or malformed container.xml found";
+                }
+                // read the file content
+                if (! empty($meta_file)) {
+                    $meta_xml = $zip->getFromName( $meta_file );
+                }
+                else {
+                    print "Error in epub file $file: no metadata file found";
+                }
+                // parse the file content for author, title and language
+                if( ! empty($meta_xml) && $xml->loadXML( $meta_xml )) {
+                    $author = '';
+                    if($xml->getElementsByTagName('creator') && $xml->getElementsByTagName('creator')->item(0)) {
+                        $author = $xml->getElementsByTagName('creator')->item(0)->nodeValue;
+                    }
+                    $title = '';
+                    if ($xml->getElementsByTagName('title') && $xml->getElementsByTagName('title')->item(0)) {
+                        $title = $xml->getElementsByTagName('title')->item(0)->nodeValue;
+                    }
+                    $language = '';
+                    if ($xml->getElementsByTagName('language') && $xml->getElementsByTagName('language')->item(0)) {
+                        $language = $xml->getElementsByTagName('language')->item(0)->nodeValue;
+                    }
+                    $dbh->add_book($author, $title, $language, substr($file,$basedir_len));
+                    $epubs_added ++;
+                }
+            }
+            else {
+                print "Error while unzipping file $file\n";
+            }
+            $zip->close();
         } // end is_indexed
     } // end preg match
 }
