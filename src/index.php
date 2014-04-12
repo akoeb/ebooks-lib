@@ -22,12 +22,12 @@ See the COPYING file for a full license statement.
 <!DOCTYPE html>
 <html>
 <head>
-<title>Brezialisten Bibliothek</title>
+<title>ebooks library</title>
 <meta charset="utf-8">
 <link href="style.css" rel="stylesheet" type="text/css">
 </head>
 <body>
-<h1>Brezialisten-Bibliothek</h1>
+<h1>ebooks library</h1>
 <form action="index.php" method="get">
 Search for book:
 <table>
